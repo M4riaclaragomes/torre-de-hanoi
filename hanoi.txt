@@ -1,0 +1,229 @@
+section .data
+    ; Mensagens utilizadas no programa
+    texto_solicitacao db 'Digite o número de discos (1 a 99):', 0
+    texto_movimento1 db 'Mover disco ', 0
+    texto_movimento3 db ' da torre ', 0
+    texto_movimento2 db ' para a torre ', 0
+    texto_conclusao db 'Processo concluído!', 0
+    texto_erro db 'Entrada inválida, tente novamente.', 0
+    torre_origem db 'A', 0
+    torre_auxiliar db 'B', 0
+    torre_destino db 'C', 0
+    nova_linha db 10 ; Código ASCII para nova linha
+
+section .bss
+    buffer_usuario resb 3  ; Buffer para entrada do usuário (até dois dígitos e newline)
+    total_discos resb 1    ; Armazena o número de discos
+    buffer_temporario resb 2 ; Buffer para comprimento de strings
+
+section .text
+    global _start
+
+_start:
+    ; Início do programa
+inicio:
+    mov ecx, texto_solicitacao
+    call escrever_texto ; Solicita ao usuário para inserir o número de discos
+
+    mov ecx, buffer_usuario
+    call ler_entrada_usuario ; Lê a entrada digitada pelo usuário
+
+    call validar_dados ; Verifica se a entrada é válida (entre 1 e 99)
+
+    call converter_entrada_para_numero ; Converte a entrada do usuário de string para número
+    mov [total_discos], al ; Armazena o número total de discos para uso posterior
+
+    call executar_hanoi ; Inicia a resolução da Torre de Hanói
+
+    mov ecx, texto_conclusao
+    call escrever_texto ; Exibe mensagem indicando que o processo foi concluído
+
+    ; Encerrar o programa
+    mov eax, 1
+    xor ebx, ebx
+    int 0x80
+
+executar_hanoi:
+    ; Função principal para resolver a Torre de Hanói
+    cmp byte [total_discos], 1 ; Verifica se há apenas um disco
+    je mover_unico_disco ; Se houver apenas um disco, executa a movimentação simples
+    jmp resolver_recursivamente ; Caso contrário, resolve recursivamente
+
+mover_unico_disco:
+    ; Movimento para o caso de um único disco
+    mov ecx, texto_movimento1
+    call escrever_texto ; Exibe "Mover disco"
+
+    call mostrar_numero_disco ; Exibe o número do disco a ser movido
+
+    mov ecx, texto_movimento3
+    call escrever_texto ; Exibe "da torre"
+
+    mov ecx, torre_origem
+    call escrever_texto ; Exibe a torre de origem
+
+    mov ecx, texto_movimento2
+    call escrever_texto ; Exibe "para a torre"
+
+    mov ecx, torre_destino
+    call escrever_texto ; Exibe a torre de destino
+
+    mov ecx, nova_linha
+    call escrever_caractere ; Adiciona uma nova linha para organizar a saída
+    ret
+
+resolver_recursivamente:
+    ; Movimento para mais de um disco (recursão)
+    dec byte [total_discos] ; Reduz temporariamente o número de discos
+
+    ; Salva o estado atual na pilha para manter os valores originais
+    push dword [total_discos]
+    push dword [torre_origem]
+    push dword [torre_auxiliar]
+    push dword [torre_destino]
+
+    ; Alterna as torres auxiliar e destino
+    mov al, [torre_auxiliar]
+    mov bl, [torre_destino]
+    mov [torre_destino], al
+    mov [torre_auxiliar], bl
+
+    call executar_hanoi ; Resolve para a subpilha menor
+
+    ; Restaura o estado original das variáveis
+    pop dword [torre_destino]
+    pop dword [torre_auxiliar]
+    pop dword [torre_origem]
+    pop dword [total_discos]
+
+    ; Move o disco atual entre torres
+    mov ecx, texto_movimento1
+    call escrever_texto ; Exibe "Mover disco"
+
+    inc byte [total_discos] ; Ajusta o número para exibir corretamente
+    call mostrar_numero_disco ; Exibe o número do disco
+    dec byte [total_discos] ; Restaura o valor original
+
+    mov ecx, texto_movimento3
+    call escrever_texto ; Exibe "da torre"
+
+    mov ecx, torre_origem
+    call escrever_texto ; Exibe a torre de origem
+
+    mov ecx, texto_movimento2
+    call escrever_texto ; Exibe "para a torre"
+
+    mov ecx, torre_destino
+    call escrever_texto ; Exibe a torre de destino
+
+    mov ecx, nova_linha
+    call escrever_caractere ; Adiciona uma nova linha
+
+    ; Alterna novamente as torres auxiliar e origem
+    mov al, [torre_auxiliar]
+    mov bl, [torre_origem]
+    mov [torre_origem], al
+    mov [torre_auxiliar], bl
+
+    call executar_hanoi ; Resolve para a subpilha final
+    ret
+
+converter_entrada_para_numero:
+    ; Converte a string de entrada para um número inteiro
+    movzx eax, byte [buffer_usuario] ; Obtém o primeiro caractere
+    sub al, '0' ; Converte o caractere para o número correspondente
+    movzx edx, byte [buffer_usuario + 1] ; Obtém o segundo caractere
+    cmp dl, 0x0a ; Verifica se é apenas um número
+    je somente_unidade ; Se for, pula o cálculo da dezena
+    sub dl, '0' ; Converte o segundo caractere
+    imul eax, eax, 10 ; Multiplica o primeiro número por 10
+    add eax, edx ; Soma o segundo número para obter o total
+
+somente_unidade:
+    ret
+
+escrever_caractere:
+    ; Imprime um único caractere na saída
+    mov eax, 4
+    mov ebx, 1
+    mov edx, 1
+    int 0x80
+    ret
+
+escrever_texto:
+    ; Imprime uma string na saída até encontrar o caractere nulo (0)
+    loop_escrita:
+        mov al, [ecx] ; Carrega o caractere atual
+        cmp al, 0 ; Verifica se é o final da string
+        je finalizar_escrita ; Se for, termina
+        call escrever_caractere ; Caso contrário, imprime o caractere
+        inc ecx ; Move para o próximo caractere
+        jmp loop_escrita ; Continua no loop
+
+    finalizar_escrita:
+        ret
+
+ler_entrada_usuario:
+    ; Lê até 3 caracteres do usuário
+    mov eax, 3
+    mov ebx, 0
+    mov edx, 3
+    int 0x80
+    ret
+
+validar_dados:
+    ; Verifica se a entrada é válida (entre 1 e 99)
+    mov al, [buffer_usuario] ; Lê o primeiro caractere
+    cmp al, '1' ; Deve ser no mínimo 1
+    jb entrada_invalida
+    cmp al, '9' ; Máximo é 9 para o primeiro caractere
+    ja entrada_invalida
+
+    mov al, [buffer_usuario + 1] ; Lê o segundo caractere
+    cmp al, 0x0a ; Verifica se é uma nova linha (número de 1 dígito)
+    je dados_validos ; Se for, é válido
+    cmp al, '0' ; Caso contrário, verifica se é um número
+    jb entrada_invalida
+    cmp al, '9'
+    ja entrada_invalida
+
+    mov al, [buffer_usuario + 2]
+    cmp al, 0x0a ; Verifica se há um terceiro caractere (indicando >= 100)
+    jne entrada_invalida ; Se houver, é inválido
+
+dados_validos:
+    ; Entrada validada com sucesso
+    ret
+
+entrada_invalida:
+    ; Mensagem de erro e reinício
+    mov ecx, texto_erro
+    call escrever_texto ; Exibe "Entrada inválida"
+    mov ecx, nova_linha
+    call escrever_caractere ; Adiciona nova linha
+    jmp inicio ; Reinicia o programa
+
+mostrar_numero_disco:
+    ; Converte e exibe o número do disco
+    movzx eax, byte [total_discos]
+    lea edi, [buffer_temporario + 2]
+    call numero_para_string ; Converte número para string
+    mov eax, 4 ; Configura para impressão
+    mov ebx, 1
+    lea ecx, [edi]
+    lea edx, [buffer_temporario + 2]
+    sub edx, ecx ; Calcula o tamanho da string
+    int 0x80 ; Imprime
+    ret
+
+numero_para_string:
+    ; Converte número inteiro para string
+    dec edi ; Ajusta o buffer
+    xor edx, edx
+    mov ecx, 10 ; Base decimal
+    div ecx ; Divide para obter dígitos
+    add dl, '0' ; Converte dígito para ASCII
+    mov [edi], dl ; Armazena no buffer
+    test eax, eax ; Verifica se há mais dígitos
+    jnz numero_para_string ; Continua se necessário
+    ret
