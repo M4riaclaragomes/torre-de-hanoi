@@ -25,6 +25,6 @@ https://www.mathsisfun.com/games/towerofhanoi.html
 | Nome        | Link do GitHub                       |
 |-------------|--------------------------------------|
 | Clara Costa  | [João Silva](https://github.com/joaosilva) |
-| Maria Clara  | [Maria Lima](https://github.com/marialima) |
+| Maria Clara  | [Maria Lima](https://github.com/M4riaclaragomes) |
 
 
