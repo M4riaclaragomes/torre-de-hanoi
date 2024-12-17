@@ -1,3 +1,5 @@
+; Clara Oliveira e Maria Clara Gomes
+
 section .data
     ; Mensagens utilizadas no programa
     texto_solicitacao db 'Digite o número de discos (1 a 99):', 0
